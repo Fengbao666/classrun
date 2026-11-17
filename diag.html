@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClassRun 安装诊断</title>
+<style>
+  body{margin:0;padding:16px;font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#F5F7FB;color:#1F2A44}
+  h1{font-size:17px;margin:0 0 4px}
+  .sub{color:#6B7280;font-size:12px;margin-bottom:14px}
+  .card{background:#fff;border:1px solid #E3E8F1;border-radius:12px;padding:12px 14px;margin-bottom:12px}
+  .row{display:block;padding:6px 0;border-bottom:1px dashed #EEF1F7}
+  .row:last-child{border:0}
+  .k{display:block;color:#6B7280;font-size:12px}
+  .v{display:block;font-family:Consolas,monospace;word-break:break-all;font-size:13px;margin-top:1px}
+  .ok{color:#2F9E44;font-weight:700}
+  .bad{color:#C92A2A;font-weight:700}
+  .warn{color:#C2410C;font-weight:700}
+  .big{font-size:15px;font-weight:700;margin-bottom:8px}
+</style>
+</head>
+<body>
+<h1>ClassRun 安装诊断</h1>
+<div class="sub">把这一页截图发给开发者，就能定位为什么装不上</div>
+
+<div class="card">
+  <div class="big">1. 环境</div>
+  <div id="env"></div>
+</div>
+
+<div class="card">
+  <div class="big">2. 清单 / 图标</div>
+  <div id="mani"></div>
+</div>
+
+<div class="card">
+  <div class="big">3. Service Worker</div>
+  <div id="sw"></div>
+</div>
+
+<div class="card">
+  <div class="big">4. 安装事件</div>
+  <div id="inst"></div>
+</div>
+
+<script>
+var rows = [];
+function row(box, k, v, cls) {
+  var d = document.createElement('div');
+  d.className = 'row';
+  d.innerHTML = '<span class="k">' + k + '</span><span class="v ' + (cls || '') + '">' + v + '</span>';
+  document.getElementById(box).appendChild(d);
+}
+
+/* 1. 环境 */
+row('env', '页面地址', location.href.split('/').slice(-2).join('/'));
+row('env', '协议', location.protocol, location.protocol === 'https:' ? 'ok' : 'bad');
+row('env', '安全上下文', String(window.isSecureContext), window.isSecureContext ? 'ok' : 'bad');
+row('env', 'UA', (navigator.userAgent || '').replace(/^Mozilla\/5\.0 /, '').slice(0, 60));
+row('env', '显示模式', matchMedia('(display-mode: standalone)').matches ? 'standalone（已安装）' : 'browser（浏览器标签）');
+
+/* 2. 清单 */
+fetch('manifest.json', { cache: 'no-store' })
+  .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, type: r.headers.get('content-type'), json: j }; }); })
+  .then(function (res) {
+    row('mani', 'manifest.json', res.ok ? '200' : 'FAIL', res.ok ? 'ok' : 'bad');
+    row('mani', 'Content-Type', res.type || '-', /json/.test(res.type || '') ? 'ok' : 'warn');
+    row('mani', 'name / short_name', (res.json.name || '-') + ' / ' + (res.json.short_name || '-'));
+    row('mani', 'start_url', res.json.start_url || '-', (res.json.start_url || '').indexOf('./') === 0 || /^\//.test(res.json.start_url || '') ? 'ok' : 'warn');
+    row('mani', 'display', res.json.display || '-', res.json.display === 'standalone' ? 'ok' : 'bad');
+    var ic = res.json.icons || [];
+    row('mani', 'icons', ic.length + ' 个', ic.length ? 'ok' : 'bad');
+    if (ic.length) row('mani', '尺寸', ic.map(function (i) { return i.sizes; }).join(', '));
+    return Promise.all(ic.map(function (i) {
+      return fetch(i.src, { cache: 'no-store' }).then(function (r) { return i.sizes + ':' + r.status; })
+        .catch(function () { return i.sizes + ':ERR'; });
+    }));
+  })
+  .then(function (list) {
+    if (!list) return;
+    var bad = list.filter(function (s) { return s.indexOf(':200') < 0; });
+    row('mani', '图标可访问', bad.length ? bad.join(' ') : '全部 200', bad.length ? 'bad' : 'ok');
+  })
+  .catch(function (e) {
+    row('mani', 'manifest.json', '读取失败：' + e.message, 'bad');
+  });
+
+/* 3. Service Worker */
+if (!('serviceWorker' in navigator)) {
+  row('sw', '支持', '该浏览器不支持', 'bad');
+} else {
+  navigator.serviceWorker.getRegistrations().then(function (regs) {
+    row('sw', '已注册数量', String(regs.length), regs.length ? 'ok' : 'bad');
+    regs.forEach(function (r) {
+      row('sw', 'scope', r.scope.replace(location.origin, ''));
+      row('sw', 'active', r.active ? r.active.state : '无', r.active ? 'ok' : 'warn');
+    });
+    if (!regs.length) {
+      return navigator.serviceWorker.register('sw.js').then(function (r) {
+        row('sw', '重试注册', '成功，等待激活', 'ok');
+        return navigator.serviceWorker.ready;
+      }).then(function (r) {
+        row('sw', '激活后 active', r.active ? r.active.state : '无', 'ok');
+      });
+    }
+  }).catch(function (e) {
+    row('sw', '注册失败', (e && e.message || e).toString().slice(0, 40), 'bad');
+  });
+  row('sw', 'controller', navigator.serviceWorker.controller ? '已接管页面' : '未接管（首次加载正常）');
+}
+
+/* 4. beforeinstallprompt */
+var got = false;
+window.addEventListener('beforeinstallprompt', function () { got = true; row('inst', 'beforeinstallprompt', '已触发 ✅', 'ok'); });
+setTimeout(function () {
+  row('inst', 'beforeinstallprompt', got ? '已触发' : '未触发（浏览器认为不可安装）', got ? 'ok' : 'bad');
+  row('inst', '结论', got ? '可以安装' : '交给开发者判断', got ? 'ok' : 'warn');
+}, 6000);
+
+/* 触发一次 SW 注册，保证清单被解析 */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function () {});
+}
+</script>
+</body>
+</html>
