@@ -1,0 +1,22 @@
+{
+  "name": "ClassRun · 赶课时间预算",
+  "short_name": "ClassRun",
+  "description": "课间换教室来不来得及：按课表时间预测迟到概率，给出出发建议。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F7FB",
+  "theme_color": "#3B5BDB",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "今日体验", "url": "./index.html?tab=audit" },
+    { "name": "校园地图", "url": "./index.html?tab=map" }
+  ]
+}
