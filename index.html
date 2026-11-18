@@ -667,6 +667,9 @@ body.map-big .map-card #map{width:100%;height:100%;min-height:0}
 @media (max-width:1080px){
   body.map-big .map-card{left:8px;right:8px;top:8px;bottom:8px}
 }
+@media (max-width:640px){
+  .top-note{display:none}
+}
 </style>
 </head>
 <body>
@@ -2212,7 +2215,8 @@ body.map-big .map-card #map{width:100%;height:100%;min-height:0}
 
   /* ---------------- 渲染 ---------------- */
   function render() {
-    if (state.tab === 'single') { renderSingle(); } else { renderAudit(); }
+    // 地图 tab 用的是同一份单程结果；只有“今日体验”才走审计视图。
+    if (state.tab === 'audit') renderAudit(); else renderSingle();
   }
 
   function renderSingle() {
@@ -4108,7 +4112,7 @@ body.map-big .map-card #map{width:100%;height:100%;min-height:0}
 
 
   /* ---------------- 诊断：版本号 / 报错条 / 地图异常提示 ---------------- */
-  var BUILD_TAG = 'v2026.11.18-1924';
+  var BUILD_TAG = 'v2026.11.18-2011';
   window.__classrunBuild = BUILD_TAG;
 
   function showBanner(msg, color, kind) {
@@ -4696,7 +4700,7 @@ body.map-big .map-card #map{width:100%;height:100%;min-height:0}
   };
 })();
 </script>
-<div id="cr-ver" style="position:fixed;right:6px;bottom:4px;font-size:10px;color:#B7C0D0;z-index:9998">v2026.11.18-1924</div>
+<div id="cr-ver" style="position:fixed;right:6px;bottom:4px;font-size:10px;color:#B7C0D0;z-index:9998">v2026.11.18-2011</div>
 <div class="pick-sheet" id="pick-sheet" hidden>
   <div class="pick-head"><b id="pick-name">楼栋</b><span>设为</span></div>
   <div class="pick-actions">

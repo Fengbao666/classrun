@@ -1,7 +1,7 @@
 /* ClassRun Service Worker：离线缓存 + 通知点击处理
  * 只缓存应用外壳；/ocr API 与 ocr/ 大模型不进入缓存，避免几百 MB 的缓存占用。
  */
-const CACHE = 'classrun-2026.11.18-1924';
+const CACHE = 'classrun-2026.11.18-2011';
 const SHELL = [
   './',
   './index.html',
