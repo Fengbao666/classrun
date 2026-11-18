@@ -1,17 +1,22 @@
-/* ClassRun Service Worker：离线缓存 + 通知点击处理 */
-const CACHE = 'classrun-v1';
-const ASSETS = [
+/* ClassRun Service Worker：离线缓存 + 通知点击处理
+ * 只缓存应用外壳；/ocr API 与 ocr/ 大模型不进入缓存，避免几百 MB 的缓存占用。
+ */
+const CACHE = 'classrun-2026.11.18-1924';
+const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './manifest.json',
   './icon-192.png',
   './icon-512.png',
+  './maskable-192.png',
+  './maskable-512.png',
   './apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
   );
 });
 
@@ -23,23 +28,49 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-/* 网络优先、失败回落缓存：保证更新及时，同时离线可用 */
+function isCacheable(url) {
+  if (url.origin !== location.origin) return false;
+  if (url.pathname === '/ocr' || url.pathname.indexOf('/ocr/') === 0) return false;
+  if (url.pathname.indexOf('/源码/') >= 0 || url.pathname.indexOf('/发布包/') >= 0) return false;
+  return true;
+}
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== location.origin) return;
+  if (!isCacheable(url)) return;
 
+  // 页面导航：网络优先，离线回落缓存
+  if (req.mode === 'navigate') {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put('./index.html', copy)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // 静态资源：缓存优先，后台更新
   e.respondWith(
-    fetch(req)
-      .then((res) => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        }
-        return res;
-      })
-      .catch(() => caches.match(req).then((hit) => hit || caches.match('./index.html')))
+    caches.match(req).then((hit) => {
+      const network = fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => hit);
+      return hit || network;
+    })
   );
 });
 

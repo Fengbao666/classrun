@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#3B5BDB">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -16,7 +16,7 @@
   --card:#FFFFFF;
   --ink:#16203A;
   --ink2:#3D4A63;
-  --muted:#8792A8;
+  --muted:#5B6780;
   --line:#E7ECF4;
   --line2:#DCE3EE;
   --accent:#3B5BDB;
@@ -35,6 +35,16 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+.skip-link{
+  position:absolute;left:-9999px;top:0;z-index:100000;
+  background:#1F2A44;color:#fff;padding:10px 14px;border-radius:0 0 10px 0;
+  font-size:13px;font-weight:700;text-decoration:none;
+}
+.skip-link:focus{left:0}
+:focus-visible{outline:3px solid #5C7CFA;outline-offset:2px}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
 body{
   background:var(--bg);
   color:var(--ink);
@@ -623,9 +633,44 @@ body.is-editing .map-legend{display:none}
   background:#E8F5EC;color:#2F9E44;border:1px solid #C9E9D2;
 }
 .rs-install[hidden]{display:none}
+
+/* ---------- 地图尺寸：桌面端把中间栏让给地图 ---------- */
+@media (min-width:1081px){
+  .layout{
+    grid-template-columns:310px minmax(0,1fr) 350px;
+    gap:12px;
+    padding:12px 16px 14px;
+  }
+  .steps-card{max-height:190px}
+  .map-card{min-height:max(500px,56vh)}
+  .map-wrap{min-height:0}
+}
+@media (min-width:1680px){
+  .layout{grid-template-columns:320px minmax(0,1fr) 370px}
+  .steps-card{max-height:210px}
+  .map-card{min-height:max(560px,58vh)}
+}
+
+/* ---------- 地图放大：卡片浮到全屏 ---------- */
+body.map-big{overflow:hidden}
+body.map-big::before{
+  content:"";position:fixed;inset:0;z-index:99989;
+  background:rgba(15,23,42,.38);backdrop-filter:blur(2px);
+}
+body.map-big .map-card{
+  position:fixed;left:12px;right:12px;top:12px;bottom:12px;z-index:99990;
+  height:auto;min-height:0;max-height:none;margin:0;border-radius:18px;
+  box-shadow:0 24px 80px -12px rgba(10,20,40,.55);
+}
+body.map-big .map-card .map-wrap{flex:1 1 auto;min-height:0;height:auto}
+body.map-big .map-card #map{width:100%;height:100%;min-height:0}
+@media (max-width:1080px){
+  body.map-big .map-card{left:8px;right:8px;top:8px;bottom:8px}
+}
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">跳到主要内容</a>
 
 <header class="topbar">
   <div class="brand">
@@ -643,16 +688,16 @@ body.is-editing .map-legend{display:none}
     </div>
   </div>
   <nav class="tabs" role="tablist" aria-label="功能切换">
-    <button class="tab is-active" data-tab="single" role="tab" aria-selected="true">单程预算</button>
-    <button class="tab" data-tab="audit" role="tab" aria-selected="false">今日体验</button>
-        <button class="tab tab-map" data-tab="map" role="tab" aria-selected="false">校园地图</button>
+    <button class="tab is-active" id="tab-single" data-tab="single" role="tab" aria-selected="true" aria-controls="view-single">单程预算</button>
+    <button class="tab" id="tab-audit" data-tab="audit" role="tab" aria-selected="false" aria-controls="view-audit">今日体验</button>
+    <button class="tab tab-map" id="tab-map" data-tab="map" role="tab" aria-selected="false" aria-controls="view-map">校园地图</button>
   </nav>
-  <div class="top-note" title="长度与耗时为教学示意数据，非精确测绘">路网按官方地图整理</div>
+  <div class="top-note" title="长度与耗时为教学示意数据，非精确测绘">路网为教学示意数据</div>
 </header>
 
-<main>
+<main id="main">
   <!-- ============ 单程预算 ============ -->
-  <section class="view is-active" id="view-single">
+  <section class="view is-active" id="view-single" role="tabpanel" aria-labelledby="tab-single">
     <div class="layout">
 
       <aside class="panel card">
@@ -673,7 +718,7 @@ body.is-editing .map-legend{display:none}
             <select id="to-building" class="sel"></select>
             <select id="to-floor" class="sel sel-floor"></select>
           </div>
-          <input id="to-room" class="inp" type="text" value="508" placeholder="教室号（可选）">
+          <input id="to-room" class="inp" type="text" value="312" placeholder="教室号（可选）">
         </div>
 
         <div class="field">
@@ -723,6 +768,7 @@ body.is-editing .map-legend{display:none}
           <div class="card-head">
             <h2>校园路网与推荐路线</h2>
             <span class="hint">点击楼栋设为终点 · Shift + 点击设为起点</span>
+            <button class="btn-ghost" id="btn-map-big" title="放大地图（Esc 退出）" aria-pressed="false">⛶ 放大地图</button>
             <button class="btn-ghost" id="btn-edit" title="进入后可直接拖动楼栋改位置">✥ 编辑位置</button>
           </div>
           <div class="map-wrap">
@@ -761,7 +807,7 @@ body.is-editing .map-legend{display:none}
       </div>
 
       <aside class="right">
-        <div class="card result-card">
+        <div class="card result-card" aria-live="polite">
           <div class="card-head">
             <h2>这段路能不能赶上</h2>
             <span class="badge" id="risk-badge">—</span>
@@ -809,14 +855,14 @@ body.is-editing .map-legend{display:none}
   </section>
 
   <!-- ============ 今日体验 ============ -->
-  <section class="view" id="view-map">
+  <section class="view" id="view-map" role="tabpanel" aria-labelledby="tab-map">
     <div class="map-view-wrap">
-      <div class="map-hint">点楼栋选择「起点 / 终点」；地图可左右滑动、两指缩放</div>
+      <div class="map-hint">点楼栋选择「起点 / 终点」；地图可左右滑动查看</div>
       <div id="map-slot"></div>
     </div>
   </section>
 
-  <section class="view" id="view-audit">
+  <section class="view" id="view-audit" role="tabpanel" aria-labelledby="tab-audit">
     <div class="audit-top">
       <div class="card audit-summary">
         <div class="card-head">
@@ -865,8 +911,11 @@ body.is-editing .map-legend{display:none}
             <button id="btn-import-parse">解析预览</button>
             <button id="btn-import-apply">覆盖导入</button>
             <button id="btn-import-append">追加导入</button>
+            <button id="btn-import-json">导入 JSON 备份</button>
+            <button id="btn-import-undo" hidden>撤销本次导入</button>
             <button id="btn-import-cancel">取消</button>
           </div>
+          <input type="file" id="import-json-file" accept=".json,application/json" hidden>
           <div class="import-preview" id="import-preview"></div>
         </div>
 
@@ -1259,6 +1308,7 @@ body.is-editing .map-legend{display:none}
     elevatorWait: { offpeak: 40, peak: 65 },         // 秒，等电梯期望
     indoorLeave: 40,                                 // 秒，教室→楼门口
     indoorEnter: 30,                                 // 秒，楼门口→教室入座
+    indoorSameBuilding: 70,                          // 秒，同楼内步行/找教室
     detourFactor: 1.04                               // 路网直线化修正
   };
 
@@ -1538,16 +1588,41 @@ body.is-editing .map-legend{display:none}
     var bFrom = getBuilding(campus, from.building);
     var bTo = getBuilding(campus, to.building);
     if (!bFrom || !bTo) return { ok: false, reason: '未找到楼栋' };
-    if (bFrom.id === bTo.id && from.floor === to.floor) {
-      // 同楼同层：直接按楼内通行估算
-      var sameSec = 60;
+    var sameBuilding = bFrom.id === bTo.id;
+    var sameFloor = (from.floor || 1) === (to.floor || 1);
+    if (ctx.accessible && !(sameBuilding && sameFloor)) {
+      var noLiftFrom = bFrom.elevator === false && (from.floor || 1) > 1;
+      var noLiftTo = bTo.elevator === false && (to.floor || 1) > 1;
+      if (noLiftFrom || noLiftTo) {
+        return { ok: false, reason: (noLiftFrom ? bFrom.abbr : bTo.abbr) + '没有可用电梯，无障碍方案不可达' };
+      }
+    }
+
+    if (sameBuilding) {
+      // 同楼：不要绕到 1 层再上来，直接按楼层差计算
+      var df = Math.abs((from.floor || 1) - (to.floor || 1));
+      var vSame = verticalPlan(df, ctx);
+      var indoorSame = MODEL.indoorSameBuilding;
+      var sameSec = indoorSame + vSame.seconds;
+      var sameSteps = [];
+      if (df > 0) {
+        sameSteps.push({
+          icon: (to.floor || 1) > (from.floor || 1) ? 'up' : 'down',
+          text: ((to.floor || 1) > (from.floor || 1) ? '上楼 ' : '下楼 ') + df + ' 层（' +
+            vSame.how + '，约 ' + fmtDur(vSame.seconds) + '）'
+        });
+      }
+      sameSteps.push({ icon: 'seat', text: '楼内步行并找到 ' + (to.room || '教室') + ' 入座（约 ' + fmtDur(indoorSame) + '）' });
       return {
         ok: true, sameBuilding: true, mode: ctx.mode, meters: 0,
         seconds: sameSec,
-        breakdown: { walk: 0, indoor: sameSec, vertical: 0 },
-        steps: [{ icon: 'dot', text: '同一楼栋同一楼层，楼内步行约 1 分钟' }],
+        breakdown: { walk: 0, indoor: indoorSame, vertical: vSame.seconds },
+        vertical: { from: { seconds: 0, how: '无需上下楼', floors: 0 }, to: vSame },
+        exposedRatio: 0,
+        steps: sameSteps,
         polyline: [[bFrom.x, bFrom.y], [bTo.x, bTo.y]],
-        elevator: '', floorsFrom: 0, floorsTo: 0
+        floorsFrom: Math.abs((from.floor || 1) - 1),
+        floorsTo: Math.abs((to.floor || 1) - 1)
       };
     }
     var vFrom = verticalPlan(Math.abs((from.floor || 1) - 1), ctx);
@@ -1657,6 +1732,13 @@ body.is-editing .map-legend{display:none}
     for (var i = 0; i < n; i++) {
       var speedFactor = clamp(1 + gauss(rand) * 0.11, 0.74, 1.3);
       var t = baseWalk / speedFactor;
+      if (plan.sameBuilding) {
+        // 同楼方案没有楼外步行：以确定耗时为基准，只加楼内找教室/等电梯的波动
+        t = (plan.seconds || 0) + clamp(gauss(rand) * 14, -18, 35);
+        if (rand() < 0.12) t += 10 + rand() * 25;
+        samples[i] = t;
+        continue;
+      }
       // 人流偶发事件：让路、排队、被叫住
       if (rand() < 0.18) t += 25 + rand() * 45;
       // 楼内找教室的波动
@@ -1700,22 +1782,31 @@ body.is-editing .map-legend{display:none}
     if (prob < 0.05) return { key: 'safe', label: '从容', color: '#2F9E44' };
     if (prob < 0.2) return { key: 'ok', label: '偏紧', color: '#F08C00' };
     if (prob < 0.45) return { key: 'tight', label: '紧张', color: '#E8590C' };
-    return { key: 'risky', label: '大概率迟到', color: '#E03131' };
+    return { key: 'risky', label: '迟到风险高', color: '#E03131' };
   }
 
-  function buildAdvice(plan, stats, budgetSec, fromLabel, toLabel) {
+  /* 概率显示：避免 0% / 100% 造成“必然/不可能”的错觉 */
+  function fmtProb(p) {
+    if (p == null || !isFinite(p)) return '—';
+    if (p < 0.005) return '<1%';
+    if (p > 0.995) return '>99%';
+    return Math.round(p * 100) + '%';
+  }
+
+  function buildAdvice(plan, stats, budgetSec, fromLabel, toLabel, ctx) {
     var prob = stats.lateProb;
     var risk = riskLevel(prob);
+    var mctx = makeContext(ctx || {});
     var slack = budgetSec - stats.p50;
     var head = '';
-    if (risk.key === 'safe') head = '这段路走下来是稳的。';
+    if (risk.key === 'safe') head = '这段路基本来得及。';
     else if (risk.key === 'ok') head = '时间偏紧，但正常走不会迟到。';
     else if (risk.key === 'tight') head = '这一趟要抓紧，别在教学楼门口停留。';
-    else head = '按现在的课间时长，大概率会迟到。';
+    else head = '按现在的课间时长，迟到风险偏高。';
 
     var body = '从 ' + fromLabel + ' 到 ' + toLabel + '，正常耗时约 ' + fmtDur(stats.p50) +
       '，保守估计 ' + fmtDur(stats.p80) + '；课间只有 ' + fmtDur(budgetSec) +
-      '，迟到概率约 ' + Math.round(prob * 100) + '%。';
+      '，模型推算迟到概率约 ' + fmtProb(prob) + '。';
 
     var tips = [];
     if (slack > 90) {
@@ -1725,13 +1816,16 @@ body.is-editing .map-legend{display:none}
     } else {
       tips.push('时间确实不够：建议下课立刻出发，并提前和任课老师说明。');
     }
-    if (plan.vertical && (plan.vertical.from.how === '楼梯' && plan.vertical.from.floors >= 3)) {
-      tips.push('下楼走楼梯比等电梯快，高峰期能省 ' + Math.round(
-        MODEL.elevatorWait.peak + plan.vertical.from.floors * MODEL.elevatorPerFloor - plan.vertical.from.seconds
+    if (plan.vertical && plan.vertical.from && plan.vertical.from.how === '楼梯' && plan.vertical.from.floors >= 3) {
+      var wait = mctx.elevatorWait;
+      tips.push('下楼走楼梯比等电梯快，当前条件下能省 ' + Math.round(
+        wait + plan.vertical.from.floors * MODEL.elevatorPerFloor - plan.vertical.from.seconds
       ) + ' 秒左右。');
     }
     if ((plan.exposedRatio || 0) > 0.6) tips.push('这条路大部分在露天，雨天建议改走连廊方案。');
-    if (plan.meters > 400) tips.push('全程约 ' + plan.meters + ' 米，可以顺路把水杯灌满再走。');
+    if (plan.meters > 400 && (prob == null || prob < 0.15) && slack > 120) {
+      tips.push('全程约 ' + plan.meters + ' 米，时间还宽裕，可以顺路把水杯灌满再走。');
+    }
 
     return {
       risk: risk,
@@ -1771,11 +1865,16 @@ body.is-editing .map-legend{display:none}
     { id: 'g2', day: 5, name: '创新创业实践', room: '科技馆报告厅', building: 'LAB', floor: 2, start: 8 * 60 + 50, end: 9 * 60 + 35 }
   ];
 
+  function gapBudget(gapMin) {
+    return Math.max(0, gapMin * 60 - 60); // 预留 1 分钟到教室坐定
+  }
+
   function auditSchedule(graph, schedule, opts) {
     schedule = schedule || SAMPLE_SCHEDULE;
     var out = [];
     for (var i = 0; i < schedule.length - 1; i++) {
       var a = schedule[i], b = schedule[i + 1];
+      if (a.day != null && b.day != null && a.day !== b.day) continue; // 跨天不构成课间
       var gapMin = b.start - a.end;
       if (gapMin <= 0) continue;
       if (gapMin > 60) continue; // 大段时间不算换教室压力
@@ -1785,7 +1884,7 @@ body.is-editing .map-legend{display:none}
         out.push({ from: a, to: b, gapMin: gapMin, ok: false, reason: plan.reason });
         continue;
       }
-      var budget = gapMin * 60 - 60; // 预留 1 分钟到教室坐定
+      var budget = gapBudget(gapMin);
       var stats = simulate(plan, opts, budget, 3000, 1234 + i);
       out.push({
         from: a, to: b, gapMin: gapMin, ok: true, plan: plan, stats: stats,
@@ -1807,6 +1906,7 @@ body.is-editing .map-legend{display:none}
       for (var pi = 0; pi < paces.length; pi++) {
         var pace = paces[pi];
         var plan = planFactory({ pace: pace });
+        if (!plan || !plan.ok) continue;
         var stats = simulate(plan, { pace: pace }, budgetSec + early * 60, 3000, 9090);
         var cand = {
           pace: pace, paceLabel: MODEL.paceLabel[pace], earlyLeave: early,
@@ -1842,8 +1942,10 @@ body.is-editing .map-legend{display:none}
     planRoute: planRoute,
     simulate: simulate,
     riskLevel: riskLevel,
+    fmtProb: fmtProb,
     buildAdvice: buildAdvice,
     auditSchedule: auditSchedule,
+    gapBudget: gapBudget,
     remedy: remedy,
     fmtDur: fmtDur,
     fmtMmSs: fmtMmSs,
@@ -1875,17 +1977,20 @@ body.is-editing .map-legend{display:none}
       var raw = localStorage.getItem(STORE_CAMPUS);
       if (!raw) return false;
       var data = JSON.parse(raw);
-      if (!data || !data.buildings) return false;
+      if (!data || !Array.isArray(data.buildings)) return false;
       var n = 0;
       data.buildings.forEach(function (s) {
+        if (!s || !s.id) return;
         var b = null;
         for (var i = 0; i < CAMPUS.buildings.length; i++) {
           if (CAMPUS.buildings[i].id === s.id) { b = CAMPUS.buildings[i]; break; }
         }
         if (!b) return;
-        ['x', 'y', 'w', 'h', 'floors'].forEach(function (k) {
-          if (typeof s[k] === 'number') b[k] = s[k];
-        });
+        if (typeof s.x === 'number' && s.x >= 0 && s.x <= CAMPUS.width) b.x = s.x;
+        if (typeof s.y === 'number' && s.y >= 0 && s.y <= CAMPUS.height) b.y = s.y;
+        if (typeof s.w === 'number' && s.w >= 20 && s.w <= 240) b.w = s.w;
+        if (typeof s.h === 'number' && s.h >= 10 && s.h <= 160) b.h = s.h;
+        if (typeof s.floors === 'number' && s.floors >= 1 && s.floors <= 30) b.floors = s.floors;
         n++;
       });
       return n > 0;
@@ -1895,7 +2000,7 @@ body.is-editing .map-legend{display:none}
   function saveCampus(silent) {
     try {
       var data = {
-        v: 1,
+        v: 2,
         savedAt: new Date().toISOString(),
         buildings: CAMPUS.buildings.map(function (b) {
           return { id: b.id, x: b.x, y: b.y, w: b.w, h: b.h, floors: b.floors };
@@ -1910,13 +2015,42 @@ body.is-editing .map-legend{display:none}
     }
   }
 
+  function normalizeCourse(c) {
+    if (!c || typeof c !== 'object') return null;
+    var name = String(c.name == null ? '' : c.name).trim().slice(0, 80);
+    var start = Number(c.start), end = Number(c.end);
+    var day = parseInt(c.day, 10);
+    var room = String(c.room == null ? '' : c.room).trim().slice(0, 40);
+    var building = String(c.building || guessBuilding(room) || '');
+    if (!name || !isFinite(start) || !isFinite(end) || end <= start) return null;
+    if (!(day >= 1 && day <= 7) || !bOf(building)) return null;
+    var out = {
+      id: String(c.id || ('c' + Date.now() + '_' + Math.round(start))),
+      day: day,
+      name: name,
+      room: room,
+      building: building,
+      floor: Math.max(1, Math.min(20, parseInt(c.floor, 10) || guessFloor(room))),
+      start: Math.max(0, Math.min(24 * 60 - 1, Math.round(start))),
+      end: Math.max(1, Math.min(24 * 60, Math.round(end)))
+    };
+    if (Array.isArray(c.weeks)) {
+      out.weeks = c.weeks.map(function (w) { return parseInt(w, 10); })
+        .filter(function (w) { return w >= 1 && w <= 30; })
+        .filter(function (w, i, arr) { return arr.indexOf(w) === i; })
+        .sort(function (a, b) { return a - b; });
+    }
+    return out;
+  }
+
   function restoreWeek() {
     try {
       var raw = localStorage.getItem(STORE_WEEK);
       if (!raw) return null;
       var arr = JSON.parse(raw);
       if (!Array.isArray(arr) || !arr.length) return null;
-      return arr;
+      var clean = arr.map(normalizeCourse).filter(Boolean);
+      return clean.length ? clean : null;
     } catch (e) { return null; }
   }
 
@@ -1924,6 +2058,27 @@ body.is-editing .map-legend{display:none}
   var graph = E.graph();
   var SVGNS = 'http://www.w3.org/2000/svg';
   var RING_C = 314.16;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function debounce(fn, ms) {
+    var timer = 0;
+    return function () {
+      var args = arguments, self = this;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(self, args); }, ms);
+    };
+  }
+  function isMobile() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 1080px)').matches);
+  }
+  function validBuilding(id) {
+    return !!E.getBuilding(CAMPUS, id);
+  }
+  function pctText(prob) { return E.fmtProb ? E.fmtProb(prob) : (prob == null ? '—' : Math.round(prob * 100) + '%'); }
 
   var state = {
     tab: 'single',
@@ -1938,6 +2093,7 @@ body.is-editing .map-legend{display:none}
   };
   var current = null;
   var walkerRAF = 0;
+  var mapBig = false;
   // 可编辑的课表（默认取引擎里的示例课表）
   var SCHEDULE_DEFAULT = E.SAMPLE_SCHEDULE.map(function (c) { return assign({}, c); });
   var weekState = (restoreWeek() || SCHEDULE_DEFAULT).map(function (c) { return assign({}, c); });
@@ -1950,19 +2106,24 @@ body.is-editing .map-legend{display:none}
   (function readQuery() {
     var q;
     try { q = new URLSearchParams(location.search); } catch (e) { return; }
-    if (q.get('from')) state.from.building = q.get('from');
-    if (q.get('fromfloor')) state.from.floor = parseInt(q.get('fromfloor'), 10);
-    if (q.get('fromroom')) state.from.room = q.get('fromroom');
-    if (q.get('to')) state.to.building = q.get('to');
-    if (q.get('tofloor')) state.to.floor = parseInt(q.get('tofloor'), 10);
-    if (q.get('toroom')) state.to.room = q.get('toroom');
+    var fromId = q.get('from'), toId = q.get('to');
+    if (validBuilding(fromId)) state.from.building = fromId;
+    if (validBuilding(toId)) state.to.building = toId;
+    var fromFloor = parseInt(q.get('fromfloor'), 10);
+    if (fromFloor >= 1 && fromFloor <= 20) state.from.floor = fromFloor;
+    var toFloor = parseInt(q.get('tofloor'), 10);
+    if (toFloor >= 1 && toFloor <= 20) state.to.floor = toFloor;
+    if (q.get('fromroom')) state.from.room = q.get('fromroom').slice(0, 40);
+    if (q.get('toroom')) state.to.room = q.get('toroom').slice(0, 40);
     if (q.get('gap')) state.gap = clampInt(parseInt(q.get('gap'), 10), 1, 30);
-    if (q.get('pace')) state.pace = q.get('pace');
-    if (q.get('weather')) state.weather = q.get('weather');
+    if (['fast', 'normal', 'slow'].indexOf(q.get('pace')) >= 0) state.pace = q.get('pace');
+    if (['sunny', 'rain'].indexOf(q.get('weather')) >= 0) state.weather = q.get('weather');
     if (q.get('peak')) state.peak = q.get('peak') !== '0';
     if (q.get('accessible')) state.accessible = q.get('accessible') === '1';
-    if (q.get('tab')) state.tab = q.get('tab');
-    if (q.get('mode')) state.mode = q.get('mode');
+    if (['single', 'audit', 'map'].indexOf(q.get('tab')) >= 0) state.tab = q.get('tab');
+    if (['fast', 'dry', 'access'].indexOf(q.get('mode')) >= 0) state.mode = q.get('mode');
+    if (state.mode === 'access') state.accessible = true;
+    if (state.tab === 'map' && !isMobile()) state.tab = 'single';
   })();
   function clampInt(v, lo, hi) { return isNaN(v) ? lo : Math.min(hi, Math.max(lo, v)); }
 
@@ -2001,8 +2162,8 @@ body.is-editing .map-legend{display:none}
     });
   }
   function fillFloors(side) {
-    var b = bOf(state[side].building);
-    var max = Math.min(b.floors || 6, 12);
+    var b = bOf(state[side].building) || CAMPUS.buildings[0];
+    var max = Math.max(1, Math.min(b.floors || 6, 20));
     var sel = $('#' + side + '-floor');
     sel.innerHTML = '';
     for (var i = 1; i <= max; i++) {
@@ -2011,7 +2172,7 @@ body.is-editing .map-legend{display:none}
       o.textContent = i + ' 层';
       sel.appendChild(o);
     }
-    if (state[side].floor > max) state[side].floor = max;
+    state[side].floor = clampInt(state[side].floor, 1, max);
     sel.value = state[side].floor;
   }
 
@@ -2023,9 +2184,9 @@ body.is-editing .map-legend{display:none}
     var plan = E.planRoute(graph, from, to, assign(c, { mode: state.mode }));
     if (!plan.ok) { current = { error: plan.reason || '无法规划' }; render(); return; }
 
-    var budget = Math.max(0, state.gap * 60 - 60);
+    var budget = E.gapBudget ? E.gapBudget(state.gap) : Math.max(0, state.gap * 60 - 60);
     var stats = E.simulate(plan, c, budget, 4000, 20261115);
-    var advice = E.buildAdvice(plan, stats, budget, labelOf(from), labelOf(to));
+    var advice = E.buildAdvice(plan, stats, budget, labelOf(from), labelOf(to), c);
 
     var alts = [
       { key: 'fast', name: '最快路线', why: '只算用时', plan: E.planRoute(graph, from, to, assign(c, { mode: 'fast' })) },
@@ -2075,11 +2236,11 @@ body.is-editing .map-legend{display:none}
       ol.appendChild(li);
       return;
     }
-    var icons = { pin: '起', down: '下', up: '上', door: '门', sit: '坐', walk: '走', dot: '·' };
+    var icons = { pin: '起', down: '下', up: '上', door: '门', seat: '坐', walk: '走', dot: '·' };
     plan.steps.forEach(function (s) {
       var li = document.createElement('li');
       li.className = s.icon === 'walk' ? 'walk' : '';
-      li.innerHTML = '<span class="ic">' + (icons[s.icon] || '·') + '</span><span>' + s.text + '</span>';
+      li.innerHTML = '<span class="ic">' + (icons[s.icon] || '·') + '</span><span>' + esc(s.text) + '</span>';
       ol.appendChild(li);
     });
     $('#steps-meta').textContent = '全程 ' + plan.meters + ' 米 · ' + plan.steps.length + ' 步';
@@ -2096,20 +2257,25 @@ body.is-editing .map-legend{display:none}
 
     var ring = $('#ring-fg');
     ring.style.stroke = risk.color;
-    ring.style.strokeDashoffset = (RING_C * (1 - prob)).toFixed(1);
-    $('#late-pct').textContent = Math.round(prob * 100) + '%';
+    ring.style.strokeDashoffset = (RING_C * (1 - (prob == null ? 0 : prob))).toFixed(1);
+    $('#late-pct').textContent = pctText(prob);
 
     $('#total-dur').textContent = mmss(p.seconds);
     $('#p80').textContent = mmss(s.p80);
     $('#meters').textContent = p.meters + ' 米';
 
-    var slack = current.budget - s.p80;
     var dl = $('#deadline');
-    if (slack >= 0) {
-      dl.textContent = '下课后 ' + Math.floor(slack / 60) + ' 分 ' + pad(Math.round(slack % 60)) + ' 秒内出发即可';
-      dl.className = 'deadline ok';
+    var best = current.remedy && current.remedy.best;
+    if (best && best.prob <= 0.15) {
+      if (best.earlyLeave > 0) {
+        dl.textContent = '建议提前 ' + best.earlyLeave + ' 分钟出发（' + best.paceLabel + '，模型 ' + pctText(best.prob) + '）';
+        dl.className = 'deadline bad';
+      } else {
+        dl.textContent = '按时出发即可（' + best.paceLabel + '，模型 ' + pctText(best.prob) + '）';
+        dl.className = 'deadline ok';
+      }
     } else {
-      dl.textContent = '需要比现在提前 ' + Math.ceil(-slack / 60) + ' 分钟离场';
+      dl.textContent = '即使提前 8 分钟 + 快走，模型迟到概率仍约 ' + pctText(best ? best.prob : prob);
       dl.className = 'deadline bad';
     }
 
@@ -2165,21 +2331,24 @@ body.is-editing .map-legend{display:none}
     (current.alts || []).forEach(function (a) {
       var d = document.createElement('div');
       d.className = 'alt' + (current.plan.mode === a.key ? ' is-cur' : '');
+      d.setAttribute('role', 'button');
+      d.tabIndex = 0;
       if (!a.plan) {
-        d.innerHTML = '<span class="name">' + a.name + '</span><span class="why">当前条件不可用</span>';
+        d.innerHTML = '<span class="name">' + esc(a.name) + '</span><span class="why">当前条件不可用</span>';
       } else {
         var diff = a.plan.seconds - current.plan.seconds;
-        var base = E.planRoute(graph, { building: state.from.building, floor: state.from.floor, room: state.from.room },
-          { building: state.to.building, floor: state.to.floor, room: state.to.room }, assign(cond(), { mode: 'fast' }));
         var tip = a.key === 'fast' ? '用时最短'
           : (a.key === 'dry' ? '露天 ' + Math.round(a.plan.exposedRatio * 100) + '%'
             : (diff <= 0 ? '含电梯' : '+' + Math.round(diff) + ' 秒'));
-        d.innerHTML = '<span class="name">' + a.name + '</span><span class="why">' + tip +
+        d.innerHTML = '<span class="name">' + esc(a.name) + '</span><span class="why">' + esc(tip) +
           '</span><span class="t">' + mmss(a.plan.seconds) + '</span>';
         d.style.cursor = 'pointer';
         d.addEventListener('click', function () {
           state.mode = state.mode === a.key ? 'fast' : a.key;
           computeAll();
+        });
+        d.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); d.click(); }
         });
       }
       box.appendChild(d);
@@ -2190,15 +2359,15 @@ body.is-editing .map-legend{display:none}
     var b = r.best;
     var html;
     if (r.found && b.earlyLeave === 0 && b.pace === 'normal') {
-      html = '<div class="rm">按现在的走法就来得及，<b>不需要提前离场</b>。迟到概率 ' +
-        Math.round(b.prob * 100) + '%。</div>';
+      html = '<div class="rm">按现在的走法就来得及，<b>不需要提前离场</b>。模型迟到概率 ' +
+        pctText(b.prob) + '。</div>';
     } else if (r.found) {
       html = '<div class="rm">想更稳：<b>提前 ' + b.earlyLeave + ' 分钟离场 + ' + b.paceLabel +
-        '</b>，迟到概率可从 ' + Math.round(current.stats.lateProb * 100) + '% 降到 ' +
-        Math.round(b.prob * 100) + '%。</div>';
+        '</b>，模型迟到概率可从 ' + pctText(current.stats.lateProb) + ' 降到 ' +
+        pctText(b.prob) + '。</div>';
     } else {
-      html = '<div class="rm">即使<b>提前 8 分钟 + ' + b.paceLabel + '</b>，迟到概率仍有 ' +
-        Math.round(b.prob * 100) + '%。建议改选就近自习室，或和任课老师说明。</div>';
+      html = '<div class="rm">即使<b>提前 8 分钟 + ' + b.paceLabel + '</b>，模型迟到概率仍有 ' +
+        pctText(b.prob) + '。建议改选就近自习室，或和任课老师说明。</div>';
     }
     rm.innerHTML = html;
   }
@@ -2334,7 +2503,7 @@ body.is-editing .map-legend{display:none}
     svg.appendChild(gB);
 
     // 路线
-    if (plan && plan.polyline && plan.polyline.length > 1) {
+    if (plan && !plan.sameBuilding && plan.polyline && plan.polyline.length > 1) {
       var pts = plan.polyline;
       var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0] + ' ' + p[1]; }).join(' ');
       var glow = svgEl('path', { d: d, fill: 'none', stroke: '#3B5BDB', 'stroke-opacity': .15, 'stroke-width': 17, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
@@ -2344,9 +2513,10 @@ body.is-editing .map-legend{display:none}
         d: d, fill: 'none', stroke: '#3B5BDB', 'stroke-width': 6,
         'stroke-linecap': 'round', 'stroke-linejoin': 'round'
       });
+      var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
       path.setAttribute('stroke-dasharray', 2600);
-      path.setAttribute('stroke-dashoffset', 2600);
-      path.style.animation = 'cr-dash .95s cubic-bezier(.3,.8,.4,1) forwards';
+      path.setAttribute('stroke-dashoffset', reduceMotion ? 0 : 2600);
+      if (!reduceMotion) path.style.animation = 'cr-dash .95s cubic-bezier(.3,.8,.4,1) forwards';
       path.style.pointerEvents = 'none';
       svg.appendChild(path);
 
@@ -2382,19 +2552,21 @@ body.is-editing .map-legend{display:none}
       svg.appendChild(lab);
 
       // 行走小点
-      var walker = svgEl('circle', { r: 5.5, fill: '#fff', stroke: '#3B5BDB', 'stroke-width': 3.5 });
+      var walker = svgEl('circle', { cx: pts[0][0], cy: pts[0][1], r: 5.5, fill: '#fff', stroke: '#3B5BDB', 'stroke-width': 3.5 });
       walker.style.pointerEvents = 'none';
       svg.appendChild(walker);
-      var len = path.getTotalLength();
-      var t0 = performance.now();
-      var step = function (now) {
-        var k = ((now - t0) / 3200) % 1;
-        var pt = path.getPointAtLength(k * len);
-        walker.setAttribute('cx', pt.x);
-        walker.setAttribute('cy', pt.y);
+      if (!reduceMotion) {
+        var len = path.getTotalLength();
+        var t0 = performance.now();
+        var step = function (now) {
+          var k = ((now - t0) / 3200) % 1;
+          var pt = path.getPointAtLength(k * len);
+          walker.setAttribute('cx', pt.x);
+          walker.setAttribute('cy', pt.y);
+          walkerRAF = requestAnimationFrame(step);
+        };
         walkerRAF = requestAnimationFrame(step);
-      };
-      walkerRAF = requestAnimationFrame(step);
+      }
     }
 
     // 楼栋文字置于路线之上，保证可读
@@ -2449,11 +2621,27 @@ body.is-editing .map-legend{display:none}
 
   /* ---------------- 控件同步 ---------------- */
   function syncControls() {
+    if (!validBuilding(state.from.building)) state.from.building = CAMPUS.buildings[0].id;
+    if (!validBuilding(state.to.building)) state.to.building = CAMPUS.buildings[1].id;
     $('#from-building').value = state.from.building;
     $('#to-building').value = state.to.building;
     fillFloors('from'); fillFloors('to');
     $('#from-floor').value = state.from.floor;
     $('#to-floor').value = state.to.floor;
+    $('#from-room').value = state.from.room || '';
+    $('#to-room').value = state.to.room || '';
+    $('#gap').value = state.gap;
+    $('#gap-val').textContent = state.gap + ' 分钟';
+    $('#gap').style.setProperty('--pct', ((state.gap - 1) / 29 * 100) + '%');
+    document.querySelectorAll('#gap-chips button').forEach(function (b) {
+      b.classList.toggle('on', parseInt(b.dataset.gap, 10) === state.gap);
+    });
+    document.querySelectorAll('#pace button').forEach(function (x) {
+      x.classList.toggle('on', x.dataset.pace === state.pace);
+    });
+    $('#t-weather').classList.toggle('is-on', state.weather === 'rain');
+    $('#t-accessible').classList.toggle('is-on', state.accessible);
+    $('#t-peak').classList.toggle('is-on', state.peak);
   }
 
   /* ---------------- 今日体验 ---------------- */
@@ -2510,7 +2698,7 @@ body.is-editing .map-legend{display:none}
         g.style.left = pct(c.end) + '%';
         g.style.width = Math.max(0.25, (nx.start - c.end) / SPAN * 100) + '%';
         g.style.background = row && row.ok ? row.risk.color : '#E3E8F1';
-        g.title = c.room + ' → ' + nx.room + (row && row.ok ? '，迟到概率 ' + Math.round(row.stats.lateProb * 100) + '%' : '');
+        g.title = c.room + ' → ' + nx.room + (row && row.ok ? '，模型迟到概率 ' + pctText(row.stats.lateProb) : '');
         tl.appendChild(g);
       }
     });
@@ -2524,7 +2712,7 @@ body.is-editing .map-legend{display:none}
     bar.appendChild(tl);
     var cap = document.createElement('div');
     cap.className = 'tl-cap';
-    [['#CBD5F5', '上课时段'], ['#2F9E44', '从容'], ['#F08C00', '偏紧'], ['#E03131', '大概率迟到']].forEach(function (it) {
+    [['#CBD5F5', '上课时段'], ['#2F9E44', '从容'], ['#F08C00', '偏紧'], ['#E03131', '迟到风险高']].forEach(function (it) {
       var sp = document.createElement('span');
       sp.innerHTML = '<i style="background:' + it[0] + '"></i>' + it[1];
       cap.appendChild(sp);
@@ -2536,27 +2724,30 @@ body.is-editing .map-legend{display:none}
       var card = document.createElement('div');
       card.className = 'card arow';
       if (!r.ok) {
-        card.innerHTML = '<div class="gap">—</div><div class="route">规划失败</div><div></div><div></div><div class="act">' + r.reason + '</div>';
+        card.innerHTML = '<div class="gap">—</div><div class="route">规划失败</div><div></div><div></div><div class="act">' + esc(r.reason) + '</div>';
         list.appendChild(card);
         return;
       }
       var ratio = Math.min(1, r.stats.p50 / Math.max(r.budget, 1));
-      var fix = E.remedy(function (o) {
-        return E.planRoute(graph, { building: r.from.building, floor: r.from.floor, room: r.from.room },
-          { building: r.to.building, floor: r.to.floor, room: r.to.room }, assign(assign(c, o), { mode: 'fast' }));
-      }, c, r.budget, 0.2);
+      if (!r.__fix) {
+        r.__fix = E.remedy(function (o) {
+          return E.planRoute(graph, { building: r.from.building, floor: r.from.floor, room: r.from.room },
+            { building: r.to.building, floor: r.to.floor, room: r.to.room }, assign(assign(c, o), { mode: 'fast' }));
+        }, c, r.budget, 0.2);
+      }
+      var fix = r.__fix;
       var act;
       if (fix.found && fix.best.earlyLeave === 0) act = '按现状走即可';
-      else if (fix.found) act = '提前 ' + fix.best.earlyLeave + ' 分钟走<br>' + fix.best.paceLabel + '（' + Math.round(fix.best.prob * 100) + '%）';
+      else if (fix.found) act = '提前 ' + fix.best.earlyLeave + ' 分钟走<br>' + fix.best.paceLabel + '（' + pctText(fix.best.prob) + '）';
       else act = '建议换就近教室<br>或与老师沟通';
 
       card.innerHTML =
         '<div class="gap">' + r.gapMin + '<small>分钟课间</small></div>' +
-        '<div class="route">' + r.from.room + ' → ' + r.to.room +
-        '<span>' + r.from.name + ' → ' + r.to.name + '</span></div>' +
+        '<div class="route">' + esc(r.from.room) + ' → ' + esc(r.to.room) +
+        '<span>' + esc(r.from.name) + ' → ' + esc(r.to.name) + '</span></div>' +
         '<div class="meter"><div class="bar"><i style="width:' + (ratio * 100).toFixed(0) + '%;background:' + r.risk.color + '"></i></div>' +
         '<span>' + mmss(r.stats.p50) + ' / ' + mmss(r.budget) + '</span></div>' +
-        '<div class="pct" style="color:' + r.risk.color + '">' + Math.round(r.stats.lateProb * 100) + '%<div class="hint">迟到概率</div></div>' +
+        '<div class="pct" style="color:' + r.risk.color + '">' + pctText(r.stats.lateProb) + '<div class="hint">模型推算</div></div>' +
         '<div class="act">' + act + '</div>';
       list.appendChild(card);
     });
@@ -2564,25 +2755,23 @@ body.is-editing .map-legend{display:none}
     var advice = rows.filter(function (r) { return r.ok && r.stats.lateProb >= 0.45; });
     var tipCard = document.createElement('div');
     tipCard.className = 'card tip-card';
-    var tipHtml = '<div class="card-head"><h2>今日建议</h2><span class="hint">按迟到概率从高到低</span></div><ul>';
+    var tipHtml = '<div class="card-head"><h2>今日建议</h2><span class="hint">按迟到风险从高到低</span></div><ul>';
     if (!scheduleState.length) {
-      tipCard.innerHTML = tipHtml + '<li>这一天没有课，休息一下。</li></ul></div>';
+      tipCard.innerHTML = tipHtml + '<li>这一天没有课。 <button class="btn-ghost" id="btn-demo-monday">看一个示例周一</button></li></ul></div>';
     } else if (!advice.length && !rows.length) {
       tipCard.innerHTML = tipHtml + '<li>今天没有紧挨着的两节课，不需要赶。</li></ul></div>';
     } else if (!advice.length) {
       tipCard.innerHTML = tipHtml + '<li>今天的换教室都不紧张，按正常节奏走即可。</li></ul></div>';
     } else {
       advice.slice(0, 3).forEach(function (r) {
-        var fix = E.remedy(function (o) {
-          return E.planRoute(graph, { building: r.from.building, floor: r.from.floor, room: r.from.room },
-            { building: r.to.building, floor: r.to.floor, room: r.to.room }, assign(assign(c, o), { mode: 'fast' }));
-        }, c, r.budget, 0.2);
+        var fix = r.__fix;
+        if (!fix) return;
         var act = fix.found
           ? (fix.best.earlyLeave > 0
-            ? '提前 ' + fix.best.earlyLeave + ' 分钟离场并' + fix.best.paceLabel + '，可降到 ' + Math.round(fix.best.prob * 100) + '%'
-            : '下课后立即' + fix.best.paceLabel + '，可降到 ' + Math.round(fix.best.prob * 100) + '%')
+            ? '提前 ' + fix.best.earlyLeave + ' 分钟离场并' + fix.best.paceLabel + '，可降到 ' + pctText(fix.best.prob)
+            : '下课后立即' + fix.best.paceLabel + '，可降到 ' + pctText(fix.best.prob))
           : '提前离场也来不及，建议与任课老师沟通';
-        tipHtml += '<li><b>' + r.from.room + ' → ' + r.to.room + '</b>（' + r.gapMin + ' 分钟）：' + act + '</li>';
+        tipHtml += '<li><b>' + esc(r.from.room) + ' → ' + esc(r.to.room) + '</b>（' + r.gapMin + ' 分钟）：' + act + '</li>';
       });
       tipCard.innerHTML = tipHtml + '</ul></div>';
     }
@@ -2699,6 +2888,19 @@ body.is-editing .map-legend{display:none}
   }
 
   /* 把当前编辑结果写回 weekState 并持久化 */
+  var weekPersistTimer = 0;
+  function persistWeek() {
+    try {
+      localStorage.setItem(STORE_WEEK, JSON.stringify(weekState));
+    } catch (e) {
+      toast('课表保存失败：浏览器本地存储不可用或已满');
+    }
+  }
+  function queuePersistWeek() {
+    clearTimeout(weekPersistTimer);
+    weekPersistTimer = setTimeout(persistWeek, 250);
+  }
+
   function saveSchedule() {
     var d = weekDay(selectedDate);
     var wk = weekNumber(selectedDate);
@@ -2706,9 +2908,7 @@ body.is-editing .map-legend{display:none}
       return !((c.day || 1) === d && courseAppliesTo(c, wk));
     }).concat(scheduleState.map(function (c) { return assign(c, { day: d }); }));
     weekState = sortCourses(weekState);
-    try {
-      localStorage.setItem(STORE_WEEK, JSON.stringify(weekState));
-    } catch (e) { }
+    queuePersistWeek();
     var dc = $('#day-count');
     if (dc) dc.textContent = scheduleState.length ? scheduleState.length + ' 节课' : '这天没课';
     var wn = $('#day-weekno');
@@ -2721,9 +2921,18 @@ body.is-editing .map-legend{display:none}
 
   function scheduleLiteral() {
     return 'SAMPLE_SCHEDULE = [\n' + weekState.map(function (c) {
-      return "    { id: '" + c.id + "', day: " + (c.day || 1) + ", name: '" + c.name + "', room: '" + c.room +
-        "', building: '" + c.building + "', floor: " + c.floor +
-        ', start: ' + c.start + ', end: ' + c.end + ' }';
+      var parts = [
+        'id: ' + JSON.stringify(String(c.id || '')),
+        'day: ' + (c.day || 1),
+        'name: ' + JSON.stringify(String(c.name || '')),
+        'room: ' + JSON.stringify(String(c.room || '')),
+        'building: ' + JSON.stringify(String(c.building || '')),
+        'floor: ' + (c.floor || 1),
+        'start: ' + c.start,
+        'end: ' + c.end
+      ];
+      if (c.weeks && c.weeks.length) parts.push('weeks: ' + JSON.stringify(c.weeks));
+      return '    { ' + parts.join(', ') + ' }';
     }).join(',\n') + '\n  ]';
   }
 
@@ -2845,7 +3054,7 @@ body.is-editing .map-legend{display:none}
     var box = $('#sched-rows');
     box.innerHTML = '';
     var opts = CAMPUS.buildings.map(function (b) {
-      return '<option value="' + b.id + '">' + b.abbr + '</option>';
+      return '<option value="' + esc(b.id) + '">' + esc(b.abbr) + '</option>';
     }).join('');
     if (!scheduleState.length) {
       box.innerHTML = '<div class="sched-empty">这天没有课，点「+ 添加一节」或从右上角「导入课表」导入。</div>';
@@ -2861,10 +3070,10 @@ body.is-editing .map-legend{display:none}
         '<select class="s-day">' + dayOpts + '</select>' +
         '<input class="s-time" type="time" value="' + minToTime(c.start) + '">' +
         '<input class="s-time" type="time" value="' + minToTime(c.end) + '">' +
-        '<input class="s-name" type="text" value="' + c.name + '" placeholder="课程名">' +
+        '<input class="s-name" type="text" value="' + esc(c.name) + '" placeholder="课程名">' +
         '<select class="s-bld">' + opts + '</select>' +
-        '<input class="s-floor" type="number" min="1" max="14" value="' + (c.floor || 1) + '">' +
-        '<input class="s-room" type="text" value="' + (c.room || '') + '" placeholder="教室">' +
+        '<input class="s-floor" type="number" min="1" max="20" value="' + (c.floor || 1) + '">' +
+        '<input class="s-room" type="text" value="' + esc(c.room || '') + '" placeholder="教室">' +
         '<button class="s-del" title="删除这一节">×</button>';
       row.querySelector('.s-bld').value = c.building;
       var times = row.querySelectorAll('.s-time');
@@ -2879,7 +3088,7 @@ body.is-editing .map-legend{display:none}
       row.querySelector('.s-name').addEventListener('input', function () { c.name = this.value; saveSchedule(); });
       row.querySelector('.s-bld').addEventListener('change', function () { c.building = this.value; saveSchedule(); renderAudit(); });
       row.querySelector('.s-floor').addEventListener('input', function () {
-        c.floor = Math.max(1, Math.min(14, parseInt(this.value, 10) || 1));
+        c.floor = Math.max(1, Math.min(20, parseInt(this.value, 10) || 1));
         saveSchedule();
       });
       row.querySelector('.s-room').addEventListener('input', function () { c.room = this.value; saveSchedule(); });
@@ -2908,6 +3117,7 @@ body.is-editing .map-legend{display:none}
 
   /* ---------------- 导入面板 ---------------- */
   var importParsed = null;
+  var importUndo = null;
 
   function renderImportPreview() {
     var box = $('#import-preview');
@@ -2923,12 +3133,12 @@ body.is-editing .map-legend{display:none}
         var ab = bOf(c.building) ? bOf(c.building).abbr : '?';
         var roomTxt = c.room && c.room !== ab ? ab + ' · ' + c.room : ab;
         return '<div class="ip-row"><span>' + WEEKDAYS[c.day] + ' ' + minToTime(c.start) + '–' + minToTime(c.end) +
-          '</span><b>' + c.name + '</b><span>' + roomTxt + '</span></div>';
+          '</span><b>' + esc(c.name) + '</b><span>' + esc(roomTxt) + '</span></div>';
       }).join('') + '</div>';
     }
     if (importParsed.warnings.length) {
       html += '<ul class="ip-notes">' + importParsed.warnings.slice(0, 6).map(function (w) {
-        return '<li>' + w + '</li>';
+        return '<li>' + esc(w) + '</li>';
       }).join('') + '</ul>';
     }
     box.innerHTML = html;
@@ -2950,6 +3160,11 @@ body.is-editing .map-legend{display:none}
       copy.weeks = weeks.slice();
       return copy;
     });
+    if (mode === 'replace') {
+      var scope = weeks.length ? weeksText(weeks) : '全部课表';
+      if (!confirm('覆盖导入会替换' + scope + '现有的课（共 ' + weekState.length + ' 节），继续吗？\n导入后可以点「撤销本次导入」恢复。')) return;
+    }
+    importUndo = weekState.map(function (c) { return assign({}, c); });
 
     if (!weeks.length) {
       // 导成“每周”：直接覆盖全部
@@ -2978,13 +3193,51 @@ body.is-editing .map-legend{display:none}
     }
 
     weekState = sortCourses(weekState);
-    try { localStorage.setItem(STORE_WEEK, JSON.stringify(weekState)); } catch (e) { }
+    queuePersistWeek();
     loadDay(selectedDate);
     $('#import-panel').hidden = true;
     $('#btn-import').classList.remove('is-on');
-    toast('已导入 ' + incoming.length + ' 节' + (weeks.length ? '（' + weeksText(weeks) + '）' : '（每周）'));
+    var undoBtn = $('#btn-import-undo');
+    if (undoBtn) undoBtn.hidden = false;
+    toast('已导入 ' + incoming.length + ' 节' + (weeks.length ? '（' + weeksText(weeks) + '）' : '（每周）') + '，可撤销');
     importParsed = null;
     $('#import-preview').innerHTML = '';
+  }
+
+  function undoImport() {
+    if (!importUndo) { toast('没有可撤销的导入'); return; }
+    weekState = importUndo.map(function (c) { return assign({}, c); });
+    importUndo = null;
+    queuePersistWeek();
+    loadDay(selectedDate);
+    var undoBtn = $('#btn-import-undo');
+    if (undoBtn) undoBtn.hidden = true;
+    toast('已撤销本次导入');
+  }
+
+  /* 导入导出的整周课表 JSON（备份/换设备） */
+  function importWeekJson(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var arr = JSON.parse(String(reader.result || '[]'));
+        if (!Array.isArray(arr) || !arr.length) throw new Error('文件不是课表数组');
+        var clean = arr.map(normalizeCourse).filter(Boolean);
+        if (!clean.length) throw new Error('没有可用的课程记录');
+        if (!confirm('导入 ' + clean.length + ' 节课表，替换当前全部课表？')) return;
+        importUndo = weekState.map(function (c) { return assign({}, c); });
+        weekState = sortCourses(clean);
+        queuePersistWeek();
+        loadDay(selectedDate);
+        var undoBtn = $('#btn-import-undo');
+        if (undoBtn) undoBtn.hidden = false;
+        toast('已导入 ' + clean.length + ' 节，可撤销');
+      } catch (e) {
+        toast('导入失败：' + (e.message || e));
+      }
+    };
+    reader.onerror = function () { toast('读取文件失败'); };
+    reader.readAsText(file, 'utf-8');
   }
 
   /* ---------------- 图片课表识别（本地 OCR） ---------------- */
@@ -3269,7 +3522,9 @@ body.is-editing .map-legend{display:none}
   function upscaleImage(file) {
     return new Promise(function (resolve) {
       var img = new Image();
+      var url = URL.createObjectURL(file);
       img.onload = function () {
+        URL.revokeObjectURL(url);
         try {
           var scale = Math.min(2, Math.max(1.3, 1500 / img.width));
           var w = Math.round(img.width * scale), h = Math.round(img.height * scale);
@@ -3313,8 +3568,8 @@ body.is-editing .map-legend{display:none}
           resolve(file);
         }
       };
-      img.onerror = function () { resolve(file); };
-      img.src = URL.createObjectURL(file);
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
     });
   }
 
@@ -3355,21 +3610,38 @@ body.is-editing .map-legend{display:none}
     if (ocrBusy) return;
     ocrBusy = true;
     var thumb = $('#ocr-thumb');
-    thumb.src = URL.createObjectURL(file);
+    if (thumb.dataset.url) URL.revokeObjectURL(thumb.dataset.url);
+    var thumbUrl = URL.createObjectURL(file);
+    thumb.dataset.url = thumbUrl;
+    thumb.src = thumbUrl;
     $('#ocr-preview').hidden = false;
     ocrStatus('准备中', 0);
     // 1) 本地服务 /ocr（PP-OCR，精度最高）
     if (/^https?:/i.test(location.protocol)) {
-      fetch('ocr', { method: 'POST', body: file }).then(function (r) {
+      var ctrl = null, timer = 0;
+      var opts = { method: 'POST', body: file };
+      var ocrToken = '';
+      try { ocrToken = new URLSearchParams(location.search).get('token') || ''; } catch (e) { }
+      if (ocrToken) opts.headers = { 'X-ClassRun-Token': ocrToken };
+      if (typeof AbortController !== 'undefined') {
+        ctrl = new AbortController();
+        opts.signal = ctrl.signal;
+        timer = setTimeout(function () { ctrl.abort(); }, 60000);
+      }
+      var finish = function () { if (timer) clearTimeout(timer); };
+      fetch('ocr', opts).then(function (r) {
         if (!r.ok) throw new Error('no-service');
         return r.json();
       }).then(function (res) {
+        finish();
         if (!res || !res.words || !res.words.length) throw new Error('no-words');
         var tsv = window.PPOcr ? window.PPOcr.toTsv(res.words) : '';
         var text = tsv ? ocrToText(tsv, res.cells) : res.words.map(function (w) { return w.text; }).join('\n');
         ocrDone(text);
-      }).catch(function () {
+      }).catch(function (err) {
+        finish();
         ocrBusy = false;
+        if (err && err.name === 'AbortError') ocrStatus('本地识别超时，改用浏览器识别…', null);
         browserPpocr(file);
       });
       return;
@@ -3457,6 +3729,17 @@ body.is-editing .map-legend{display:none}
     $('#btn-import-parse').addEventListener('click', doParse);
     $('#btn-import-apply').addEventListener('click', function () { applyImport('replace'); });
     $('#btn-import-append').addEventListener('click', function () { applyImport('append'); });
+    var undoBtn = $('#btn-import-undo');
+    if (undoBtn) undoBtn.addEventListener('click', undoImport);
+    var jsonBtn = $('#btn-import-json');
+    var jsonFile = $('#import-json-file');
+    if (jsonBtn && jsonFile) {
+      jsonBtn.addEventListener('click', function () { jsonFile.click(); });
+      jsonFile.addEventListener('change', function () {
+        if (this.files && this.files[0]) importWeekJson(this.files[0]);
+        this.value = '';
+      });
+    }
   }
 
   function bindSched() {
@@ -3506,6 +3789,7 @@ body.is-editing .map-legend{display:none}
       toast('已还原到这次编辑前');
     });
     $('#btn-restore-week').addEventListener('click', function () {
+      if (!confirm('恢复示例课表会覆盖当前整周课表，继续吗？')) return;
       weekState = SCHEDULE_DEFAULT.map(function (c) { return assign({}, c); });
       try { localStorage.removeItem(STORE_WEEK); } catch (e) { }
       loadDay(selectedDate);
@@ -3538,39 +3822,35 @@ body.is-editing .map-legend{display:none}
 
   /* ---------------- 事件绑定 ---------------- */
   function bind() {
-    $('.tabs').addEventListener('click', function (e) {
+    var tabsBar = $('.tabs');
+    tabsBar.addEventListener('click', function (e) {
       var b = e.target.closest('.tab');
       if (!b) return;
-      state.tab = b.dataset.tab;
-      document.querySelectorAll('.tab').forEach(function (t) {
-        t.classList.toggle('is-active', t === b);
-        t.setAttribute('aria-selected', t === b ? 'true' : 'false');
+      switchTab(b.dataset.tab);
+    });
+    tabsBar.addEventListener('keydown', function (e) {
+      var list = Array.prototype.slice.call(tabsBar.querySelectorAll('.tab')).filter(function (t) {
+        return t.offsetParent !== null;
       });
-      document.querySelectorAll('.view').forEach(function (v) {
-        v.classList.toggle('is-active', v.id === 'view-' + state.tab);
-      });
-      setTimeout(checkMap, 260);
-      if (campusRestored) {
-    setTimeout(function () { toast('已载入本机保存的地图位置'); }, 600);
-  }
-  if (state.tab === 'audit') { renderAudit(); renderSchedEditor(); }
-      else if (state.tab === 'map') {
-        layoutMapCard();
-        computeAll();
-        setTimeout(function () {
-          ensureMapHeight();
-          requestAnimationFrame(function () {
-            ensureMapHeight();
-            if (current && current.plan) drawMap(current.plan);
-          });
-        }, 60);
-      } else { computeAll(); }
+      var idx = list.indexOf(document.activeElement);
+      if (idx < 0) return;
+      var next = null;
+      if (e.key === 'ArrowRight') next = list[(idx + 1) % list.length];
+      else if (e.key === 'ArrowLeft') next = list[(idx - 1 + list.length) % list.length];
+      else if (e.key === 'Home') next = list[0];
+      else if (e.key === 'End') next = list[list.length - 1];
+      if (!next) return;
+      e.preventDefault();
+      next.focus();
+      switchTab(next.dataset.tab);
     });
 
+    var roomCompute = debounce(computeAll, 200);
     ['from', 'to'].forEach(function (side) {
       $('#' + side + '-building').addEventListener('change', function (e) {
         state[side].building = e.target.value;
         fillFloors(side);
+        syncControls();
         computeAll();
       });
       $('#' + side + '-floor').addEventListener('change', function (e) {
@@ -3579,9 +3859,11 @@ body.is-editing .map-legend{display:none}
       });
       $('#' + side + '-room').addEventListener('input', function (e) {
         state[side].room = e.target.value.trim();
+        roomCompute();
       });
     });
 
+    var gapCompute = debounce(computeAll, 150);
     var gap = $('#gap');
     gap.addEventListener('input', function (e) {
       state.gap = parseInt(e.target.value, 10);
@@ -3590,7 +3872,7 @@ body.is-editing .map-legend{display:none}
       document.querySelectorAll('#gap-chips button').forEach(function (b) {
         b.classList.toggle('on', parseInt(b.dataset.gap, 10) === state.gap);
       });
-      computeAll();
+      gapCompute();
     });
     $('#gap-chips').addEventListener('click', function (e) {
       var b = e.target.closest('button');
@@ -3641,9 +3923,9 @@ body.is-editing .map-legend{display:none}
   }
 
   function buildingLiteral(b) {
-    return "{ id: '" + b.id + "', name: '" + b.name + "', abbr: '" + b.abbr +
-      "', x: " + b.x + ", y: " + b.y + ", w: " + b.w + ", h: " + b.h +
-      ", floors: " + b.floors + " }";
+    return '{ id: ' + JSON.stringify(String(b.id)) + ', name: ' + JSON.stringify(String(b.name)) +
+      ', abbr: ' + JSON.stringify(String(b.abbr)) + ', x: ' + b.x + ', y: ' + b.y +
+      ', w: ' + b.w + ', h: ' + b.h + ', floors: ' + b.floors + ' }';
   }
 
   function updateEditPanel() {
@@ -3790,6 +4072,7 @@ body.is-editing .map-legend{display:none}
       toast('已还原并保存');
     });
     $('#btn-restore-default').addEventListener('click', function () {
+      if (!confirm('恢复出厂位置会清除本机保存的地图坐标，继续吗？')) return;
       CAMPUS_DEFAULT.forEach(function (d) {
         var b = bOf(d.id);
         if (!b) return;
@@ -3825,10 +4108,10 @@ body.is-editing .map-legend{display:none}
 
 
   /* ---------------- 诊断：版本号 / 报错条 / 地图异常提示 ---------------- */
-  var BUILD_TAG = 'v2026.11.17-2100';
+  var BUILD_TAG = 'v2026.11.18-1924';
   window.__classrunBuild = BUILD_TAG;
 
-  function showBanner(msg, color) {
+  function showBanner(msg, color, kind) {
     var bar = document.getElementById('cr-diag');
     if (!bar) {
       bar = document.createElement('div');
@@ -3838,13 +4121,18 @@ body.is-editing .map-legend{display:none}
       document.body.appendChild(bar);
     }
     bar.style.background = color || '#c92a2a';
+    bar.setAttribute('data-kind', kind || 'error');
     bar.textContent = msg;
   }
 
   window.addEventListener('error', function (e) {
     var f = (e.filename || '').split('/').pop();
     showBanner('脚本错误：' + (e.message || e.error) + '\n位置：' + f + ':' + (e.lineno || '?') +
-      '\n版本：' + BUILD_TAG + '\n（把这张截图发给开发者即可定位）', '#c92a2a');
+      '\n版本：' + BUILD_TAG + '\n（把这张截图发给开发者即可定位）', '#c92a2a', 'error');
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var reason = e.reason && (e.reason.message || e.reason);
+    showBanner('未处理的异步错误：' + reason + '\n版本：' + BUILD_TAG, '#c92a2a', 'error');
   });
 
   function checkMap() {
@@ -3860,7 +4148,7 @@ body.is-editing .map-legend{display:none}
     if (r.height < 20) {
       showBanner('地图高度异常：' + Math.round(r.width) + '×' + Math.round(r.height) +
         '\n版本：' + BUILD_TAG + '\n屏幕：' + window.innerWidth + '×' + window.innerHeight +
-        '\nUA：' + navigator.userAgent.slice(0, 80) + '\n（截图发给开发者即可定位）', '#e8590c');
+        '\nUA：' + navigator.userAgent.slice(0, 80) + '\n（截图发给开发者即可定位）', '#e8590c', 'map');
     } else if (bar && bar.getAttribute('data-kind') === 'map') {
       bar.remove();
     }
@@ -3918,6 +4206,7 @@ body.is-editing .map-legend{display:none}
     var bar = document.createElement('div');
     bar.id = 'cr-remind';
     bar.className = 'remind-bar';
+    bar.setAttribute('role', 'alert');
     bar.innerHTML = '<div class="remind-ico">⏰</div>' +
       '<div class="remind-body"><div class="remind-title"></div><div class="remind-sub"></div></div>';
     bar.querySelector('.remind-title').textContent = title;
@@ -3943,6 +4232,10 @@ body.is-editing .map-legend{display:none}
     if (!scheduleState || scheduleState.length < 2) return;
     var t = nowMinutes();
     var key0 = isoDate(selectedDate);
+    if (key0 !== isoDate(new Date())) return; // 只在“今天”的课表上提醒
+    Object.keys(reminder.fired).forEach(function (k) {
+      if (k.indexOf(key0 + '|') !== 0) delete reminder.fired[k];
+    });
 
     for (var i = 0; i < scheduleState.length - 1; i++) {
       var a = scheduleState[i], b = scheduleState[i + 1];
@@ -3958,24 +4251,26 @@ body.is-editing .map-legend{display:none}
       if (!plan || !plan.ok) continue;
       var fix = E.remedy(function (o) {
         return E.planRoute(graph, fromP, toP, assign(assign(c0, o), { mode: 'fast' }));
-      }, c0, Math.max(60, gap * 60), 0.15);
+      }, c0, E.gapBudget ? E.gapBudget(gap) : Math.max(60, gap * 60 - 60), 0.15);
       var early = fix && fix.found ? fix.best.earlyLeave : 0;
       var leaveAt = a.end - early;
 
       if (t < leaveAt - reminder.lead || t > a.end + 1) continue;
 
-      var left = Math.max(0, Math.round(a.end - t));
+      var left = Math.max(0, Math.round(b.start - t));
       var walkMin = Math.max(1, Math.round(plan.seconds / 60));
-      var st = E.simulate(plan, c0, Math.max(60, (a.end - t) * 60), 1200, 7);
-      var pct = Math.round(st.lateProb * 100);
+      var budgetLeft = Math.max(0, (b.start - t) * 60 - 60);
+      var st = E.simulate(plan, c0, budgetLeft, 1200, 7);
+      var pct = pctText(st.lateProb);
+      var bAbbr = bOf(b.building) ? bOf(b.building).abbr : '';
       var title, sub;
       if (t >= leaveAt) {
-        title = '现在该出发了 → ' + (bOf(b.building) ? bOf(b.building).abbr : '') + ' ' + (b.room || '');
-        sub = '步行约 ' + walkMin + ' 分钟，距离下课还有 ' + left + ' 分钟，按现状迟到概率 ' + pct + '%';
+        title = '现在该出发了 → ' + bAbbr + ' ' + (b.room || '');
+        sub = '步行约 ' + walkMin + ' 分钟，距离下节课还有 ' + left + ' 分钟，模型迟到概率 ' + pct;
       } else {
-        title = Math.round(leaveAt - t) + ' 分钟后出发 → ' + (bOf(b.building) ? bOf(b.building).abbr : '') + ' ' + (b.room || '');
-        sub = '去 ' + (bOf(b.building) ? bOf(b.building).abbr : '') + ' 走 ' + walkMin + ' 分钟' +
-          (early > 0 ? '，建议提前 ' + early + ' 分钟走' : '') + '，按现状迟到概率 ' + pct + '%';
+        title = Math.round(leaveAt - t) + ' 分钟后出发 → ' + bAbbr + ' ' + (b.room || '');
+        sub = '去 ' + bAbbr + ' 走 ' + walkMin + ' 分钟' +
+          (early > 0 ? '，建议提前 ' + early + ' 分钟走' : '') + '，模型迟到概率 ' + pct;
       }
       reminder.fired[key] = 1;
       saveReminder();
@@ -3993,6 +4288,8 @@ body.is-editing .map-legend{display:none}
   }
 
   function switchTab(tab) {
+    if (tab === 'map' && !isMobile()) tab = 'single';
+    if (mapBig) setMapBig(false);
     state.tab = tab;
     document.querySelectorAll('.tab').forEach(function (t) {
       var on = t.dataset.tab === tab;
@@ -4222,6 +4519,30 @@ body.is-editing .map-legend{display:none}
     }
   }
 
+  /* ---------------- 地图放大 ---------------- */
+  function setMapBig(on, focusBtn) {
+    mapBig = !!on;
+    document.body.classList.toggle('map-big', mapBig);
+    var btn = $('#btn-map-big');
+    if (btn) {
+      btn.textContent = mapBig ? '⛶ 退出放大' : '⛶ 放大地图';
+      btn.setAttribute('aria-pressed', mapBig ? 'true' : 'false');
+    }
+    var svg = $('#map');
+    if (svg) { svg.style.width = ''; svg.style.height = ''; }
+    requestAnimationFrame(function () {
+      ensureMapHeight();
+      if (current && current.plan) drawMap(current.plan);
+      if (!mapBig && focusBtn && btn) btn.focus();
+    });
+  }
+
+  var mapBigResize = debounce(function () {
+    if (!mapBig) return;
+    ensureMapHeight();
+    if (current && current.plan) drawMap(current.plan);
+  }, 120);
+
   /* ---------------- 轻提示 ---------------- */
   var toastTimer = 0;
   function toast(msg) {
@@ -4230,6 +4551,8 @@ body.is-editing .map-legend{display:none}
       box = document.createElement('div');
       box.id = 'toast';
       box.className = 'toast';
+      box.setAttribute('role', 'status');
+      box.setAttribute('aria-live', 'polite');
       document.body.appendChild(box);
     }
     box.textContent = msg;
@@ -4242,6 +4565,7 @@ body.is-editing .map-legend{display:none}
   fillBuildings();
   fillFloors('from');
   fillFloors('to');
+  syncControls();
   bind();
   bindEdit();
   bindSched();
@@ -4255,6 +4579,12 @@ body.is-editing .map-legend{display:none}
   window.addEventListener('resize', ensureMapHeight);
   layoutMapCard();
   window.addEventListener('resize', layoutMapCard);
+  window.addEventListener('resize', mapBigResize);
+  var mapBigBtn = $('#btn-map-big');
+  if (mapBigBtn) mapBigBtn.addEventListener('click', function () { setMapBig(!mapBig); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && mapBig) setMapBig(false, true);
+  });
   registerSW();
   loadReminder();
   updateRemindBtn();
@@ -4275,6 +4605,14 @@ body.is-editing .map-legend{display:none}
     if (el.id === 'rs-test') { testReminder(); return; }
     if (el.id === 'rs-notif') { askNotification(); return; }
     if (el.id === 'rs-install') { doInstall(); return; }
+    if (el.id === 'btn-demo-monday') {
+      var demo = new Date();
+      demo.setDate(demo.getDate() + ((8 - weekDay(demo)) % 7 || 7));
+      selectedDate = demo;
+      loadDay(selectedDate);
+      toast('已切换到下周一（示例课表）');
+      return;
+    }
     if (el.dataset && el.dataset.lead) {
       reminder.lead = parseInt(el.dataset.lead, 10);
       saveReminder(); renderRemindSheet();
@@ -4302,45 +4640,11 @@ body.is-editing .map-legend{display:none}
     $('#btn-sched').textContent = '✎ 完成编辑';
     renderSchedEditor();
   }
-  $('#gap').style.setProperty('--pct', ((state.gap - 1) / 29 * 100) + '%');
-  if (state.weather === 'rain') $('#t-weather').classList.add('is-on');
-  if (state.accessible) $('#t-accessible').classList.add('is-on');
-  if (!state.peak) $('#t-peak').classList.remove('is-on');
-  document.querySelectorAll('#gap-chips button').forEach(function (b) {
-    b.classList.toggle('on', parseInt(b.dataset.gap, 10) === state.gap);
-  });
-  $('#gap-val').textContent = state.gap + ' 分钟';
-  document.querySelectorAll('#pace button').forEach(function (x) {
-    x.classList.toggle('on', x.dataset.pace === state.pace);
-  });
   if (campusRestored) {
     setTimeout(function () { toast('已载入本机保存的地图位置'); }, 600);
   }
   // 统一按 state.tab 激活对应页签与视图（single / audit / map）
-  document.querySelectorAll('.tab').forEach(function (t) {
-    var on = t.dataset.tab === state.tab;
-    t.classList.toggle('is-active', on);
-    t.setAttribute('aria-selected', on ? 'true' : 'false');
-  });
-  document.querySelectorAll('.view').forEach(function (v) {
-    v.classList.toggle('is-active', v.id === 'view-' + state.tab);
-  });
-  if (state.tab === 'audit') {
-    renderAudit();
-    renderSchedEditor();
-  } else if (state.tab === 'map') {
-    layoutMapCard();
-    computeAll();
-    setTimeout(function () {
-      ensureMapHeight();
-      requestAnimationFrame(function () {
-        ensureMapHeight();
-        if (current && current.plan) drawMap(current.plan);
-      });
-    }, 120);
-  } else {
-    computeAll();
-  }
+  switchTab(state.tab);
 
 
 
@@ -4392,7 +4696,7 @@ body.is-editing .map-legend{display:none}
   };
 })();
 </script>
-<div id="cr-ver" style="position:fixed;right:6px;bottom:4px;font-size:10px;color:#B7C0D0;z-index:9998">v2026.11.17-2100</div>
+<div id="cr-ver" style="position:fixed;right:6px;bottom:4px;font-size:10px;color:#B7C0D0;z-index:9998">v2026.11.18-1924</div>
 <div class="pick-sheet" id="pick-sheet" hidden>
   <div class="pick-head"><b id="pick-name">楼栋</b><span>设为</span></div>
   <div class="pick-actions">

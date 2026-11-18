@@ -1,0 +1,17 @@
+ClassRun · 赶课时间预算（Web 部署包）
+=====================================
+
+构建版本：v2026.11.18-1924
+
+把本文件夹里的全部文件上传到任意 https 静态托管即可（GitHub Pages / Gitee Pages / 自己的服务器）。
+
+包含：
+  index.html             单文件应用（离线可用）
+  manifest.webmanifest   PWA 清单（manifest.json 是兼容副本）
+  sw.js                  Service Worker（离线外壳 + 通知点击）
+  icon-*.png / maskable-*.png / apple-touch-icon.png
+  diag.html              诊断页
+  使用说明.md             完整说明
+
+注意：必须是 https（或 localhost），否则浏览器不会启用 Service Worker 与通知。
+图片课表识别需要本地服务 ocr_service.py，纯静态托管只能粘贴文本导入。
